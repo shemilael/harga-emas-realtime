@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalkulator Harga Emas Real-time</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px;
+      font-size: 16px;
+      background-color: #ffd700;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+    #output {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .social {
+      margin-top: 30px;
+      text-align: center;
+    }
+    .social a {
+      margin: 0 10px;
+      text-decoration: none;
+      font-size: 18px;
+      color: #444;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Kalkulator Harga Emas</h2>
+    <label for="gram">Masukkan berat emas (gram):</label>
+    <input type="number" id="gram" placeholder="cth: 1" />
+    <button onclick="hitungHarga()">Hitung Harga</button>
+    <div id="output"></div>
+    <div id="kurs-info">Kurs USD ke IDR: <span id="kurs-value">Memuat...</span></div>
+
+    <canvas id="xauChart" width="400" height="200"></canvas>
+
+    <div class="social">
+      Follow: 
+      <a href="https://www.instagram.com/shemilael" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Instagram_logo_2022.svg/512px-Instagram_logo_2022.svg.png" alt="Instagram" width="30" height="30" /> @shemilael</a> |
+      <a href="https://www.tiktok.com/@shemilael" target="_blank"><img src="https://id.wikipedia.org/wiki/TikTok#/media/Berkas:TikTok_logo.svg" alt="TikTok" width="30" height="30" /> @shemilael</a>
+    </div>
+  </div>
+
+  <script>
+    const GOLD_API_KEY = "goldapi-gjtsm9p9njmp-io";
+    let kurs = 0;
+
+    async function getKursUSDIDR() {
+      try {
+        const res = await fetch("https://v6.exchangerate-api.com/v6/56f793f576d4a9e48cb204dd/latest/USD");
+        const data = await res.json();
+        kurs = data.conversion_rates.IDR;
+        document.getElementById("kurs-value").textContent = kurs.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+      } catch (err) {
+        console.error("Gagal mengambil kurs:", err);
+      }
+    }
+
+    async function getHargaXAUUSD() {
+      const res = await fetch("https://www.goldapi.io/api/XAU/USD", {
+        headers: {
+          "x-access-token": GOLD_API_KEY,
+          "Content-Type": "application/json"
+        }
+      });
+      const data = await res.json();
+      return data.price;
+    }
+
+    async function hitungHarga() {
+      const gram = parseFloat(document.getElementById("gram").value);
+      const output = document.getElementById("output");
+      if (!gram || gram <= 0) {
+        output.textContent = "Masukkan berat emas yang valid.";
+        return;
+      }
+
+      try {
+        const xauusd = await getHargaXAUUSD();
+        const harga_per_gram_usd = xauusd / 31.1035;
+        const total = harga_per_gram_usd * gram * kurs;
+        output.innerHTML = `Total Harga: <br>Rp ${total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+      } catch (error) {
+        output.textContent = "Gagal menghitung harga.";
+      }
+    }
+
+    async function loadChart() {
+      const labels = [];
+      const prices = [];
+      const now = new Date();
+      for (let i = 9; i >= 0; i--) {
+        const date = new Date(now.getTime() - i * 60 * 60 * 1000);
+        labels.push(date.getHours() + ":00");
+        prices.push(Math.random() * 100 + 2000); 
+      }
+
+      const ctx = document.getElementById('xauChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'XAU/USD',
+            data: prices,
+            borderColor: 'gold',
+            backgroundColor: 'rgba(255, 215, 0, 0.2)',
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: false
+            }
+          }
+        }
+      });
+    }
+
+    getKursUSDIDR();
+    loadChart();
+  </script>
+</body>
+</html>
